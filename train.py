@@ -118,7 +118,7 @@ def categorical_accuracy(preds, y, tag_pad_idx):
     return correct.sum() / torch.FloatTensor([y[non_pad_elements].shape[0]])
 
 
-def ai(gold_str):
+def ai(gold_str, CHAR, WORD, TRG, model, device):
     char_level = CHAR.preprocess(gold_str)
     max_len = 0
     for i in range(len(char_level)):
@@ -261,6 +261,8 @@ def main(args):
     N_EPOCHS = args.epochs
 
     best_valid_loss = float('inf')
+    cleansed = filter(lambda x: x not in string.punctuation, word_tokenize(gold_str))
+    hypothesis = ai(" ".join(cleansed), CHAR, WORD, TRG, model, device)
     
     if args.train:
 
@@ -283,13 +285,14 @@ def main(args):
             #print(f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s')
             print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%')
             print(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%')
-    
-            cleansed = filter(lambda x: x not in string.punctuation, word_tokenize(gold_str))
-            hypothesis = ai(" ".join(cleansed))
-            hypothesis = " ".join(hypothesis)
-            print(hypothesis)
-            print("Quality: {:.2f}%".format(check_one(gold_str, hypothesis) * 100))
-
+        torch.save(model.state_dict(), 'best-model.pt')
+            
+    model.load_state_dict(torch.load("best-model.pth", map_location=device), )
+    cleansed = filter(lambda x: x not in string.punctuation, word_tokenize(gold_str))
+    hypothesis = ai(" ".join(cleansed), CHAR, WORD, TRG, model, device)
+    hypothesis = " ".join(hypothesis)
+    print(hypothesis)
+    print("Quality: {:.2f}%".format(check_one(gold_str, hypothesis) * 100))
     
 gold_str = "Начиная жизнеописание героя моего, Алексея Федоровича Карамазова, нахожусь в некотором недоумении. " \
            "А именно: хотя я и называю Алексея Федоровича моим героем, но, однако, сам знаю, что человек он " \
